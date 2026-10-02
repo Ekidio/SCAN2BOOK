@@ -1,0 +1,11 @@
+.venv/
+.idea/
+.claude/
+__pycache__/
+*.pyc
+build/
+dist/
+output/
+work/
+*.spec
+.DS_Store

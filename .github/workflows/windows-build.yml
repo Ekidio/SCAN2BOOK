@@ -1,0 +1,56 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths-ignore:
+      - "README.md"
+      - "packaging/build_macos.sh"
+      - "packaging/make_demo.py"
+      - "docs/**"
+      - "THIRD_PARTY_NOTICES.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Tesseract OCR és Inno Setup telepítése
+        run: choco install tesseract innosetup -y --no-progress
+
+      - name: Verzió
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") { $v = "${{ github.ref_name }}".TrimStart("v") }
+          else { $v = "0.1.${{ github.run_number }}" }
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Build + teszt
+        shell: pwsh
+        run: ./packaging/build_windows.ps1 -Version ${{ steps.ver.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SCAN2BOOK-${{ steps.ver.outputs.version }}-windows
+          path: |
+            dist/*-setup.exe
+            dist/*-portable.zip
+
+      - name: GitHub Release (csak verziócímkénél)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*-setup.exe
+            dist/*-portable.zip
